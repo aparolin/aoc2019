@@ -1,3 +1,6 @@
+import sys
+sys.path.append('../../src/01')
+
 import main
 
 def test_fuel_required():
