@@ -11,20 +11,22 @@ def fuel_required_with_additional_fuel(mass):
     fuel = fuel_required(fuel)
   return total
 
-def sum_fuel_requirements(input_file, part1):
+def sum_fuel_requirements(input_file):
   lines = open(input_file).read().splitlines()
   masses = list(map(int, lines))
 
-  if part1:
-    fuel_requirements = list(map(fuel_required, masses))
-  else:
-    fuel_requirements = list(map(fuel_required_with_additional_fuel, masses))
+  total_part1 = 0
+  total_part2 = 0
+  for m in masses:
+    total_part1 += fuel_required(m)
+    total_part2 += fuel_required_with_additional_fuel(m)
 
-  return sum(fuel_requirements)
+  return {
+    'part1': total_part1,
+    'part2': total_part2
+  }
 
 if __name__ == '__main__':
-  part1_result = sum_fuel_requirements('input.txt', True)
-  print(f'Part 1: {part1_result}')
-
-  part2_result = sum_fuel_requirements('input.txt', False)
-  print(f'Part 2: {part2_result}')
+  results = sum_fuel_requirements('input.txt')
+  print(f"Part 1: {results['part1']}")
+  print(f"Part 2: {results['part2']}")

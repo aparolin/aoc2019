@@ -12,4 +12,6 @@ def test_fuel_required_with_additional_fuel():
   assert main.fuel_required_with_additional_fuel(100756) == 50346
 
 def test_sum_fuel_requirements():
-  assert main.sum_fuel_requirements('input_test.txt', True) == 34241
+  results = main.sum_fuel_requirements('input_test.txt')
+  assert results['part1'] == 34241
+  assert results['part2'] == 51316
