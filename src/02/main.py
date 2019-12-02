@@ -52,6 +52,3 @@ if __name__ == '__main__':
 
     print(f'Part 1: {run_part1(memory)}')
     print(f'Part 2: {run_part2(memory)}')
-
-# 205800 => too high
-# 9821 => too high
