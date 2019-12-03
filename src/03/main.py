@@ -10,24 +10,27 @@ def parse_instruction(i):
     'steps': steps
   }
 
-def create_map_of_points(intruction_set):
+def get_dir_vector(direction):
+  dir_vector = [0, 0]
+  if direction == 'R':
+    dir_vector = [1, 0]
+  elif direction == 'L':
+    dir_vector = [-1, 0]
+  elif direction == 'U':
+    dir_vector = [0, -1]
+  elif direction == 'D':
+    dir_vector = [0, 1]
+  return dir_vector
+
+def find_intersections(intruction_set):
   intersections = set()
   points = {}
 
   for wire, intructions in enumerate(intruction_set):
-    pos = np.array([0,0])
+    pos = np.array([0, 0])
     for raw_instruction in intructions:
       instruction = parse_instruction(raw_instruction)
-
-      dir_vector = [0,0]
-      if instruction['dir'] == 'R':
-        dir_vector = [1,0]
-      elif instruction['dir'] == 'L':
-        dir_vector = [-1,0]
-      elif instruction['dir'] == 'U':
-        dir_vector = [0,-1]
-      elif instruction['dir'] == 'D':
-        dir_vector = [0,1]
+      dir_vector = get_dir_vector(instruction['dir'])
 
       for _ in range(0, instruction['steps']):
         pos += dir_vector
@@ -38,10 +41,29 @@ def create_map_of_points(intruction_set):
         else:
           points[tuple(pos)] = wire
 
-  return {
-    'map': points,
-    'intersections': list(intersections)
-  }
+  return list(intersections)
+
+def find_min_steps_to_intersections(instructions_set, intersections):
+  steps_to_intersection = {}
+  steps_wire = {0: 0, 1: 0}
+
+  for wire, intructions in enumerate(instructions_set):
+    pos = np.array([0,0])
+    for raw_instruction in intructions:
+      instruction = parse_instruction(raw_instruction)
+      dir_vector = get_dir_vector(instruction['dir'])
+
+      for _ in range(0, instruction['steps']):
+        pos += dir_vector
+        steps_wire[wire] += 1
+
+        if tuple(pos) in intersections:
+          if tuple(pos) in steps_to_intersection:
+            steps_to_intersection[tuple(pos)] += steps_wire[wire]
+          else:
+            steps_to_intersection[tuple(pos)] = steps_wire[wire]
+
+  return min(steps_to_intersection.values())
 
 def manhattan_distance_to_origin(point):
   return abs(point[0] - 0) + abs(point[1] - 0)
@@ -52,5 +74,8 @@ def find_closest_intersection(intersections):
 if __name__ == '__main__':
   lines = open('input.txt').read().splitlines()
   instruction_set = list(map(lambda s: s.split(','), lines))
-  points = create_map_of_points(instruction_set)
-  print(find_closest_intersection(points['intersections']))
+
+  intersections = find_intersections(instruction_set)
+  print(f'Part 1: {find_closest_intersection(intersections)}')
+
+  print(f'Part 2: {find_min_steps_to_intersections(instruction_set, intersections)}')
