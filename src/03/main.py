@@ -3,15 +3,12 @@ import numpy as np
 
 def parse_instruction(i):
   groups = re.search(r'(\w)(\d+)', i).groups()
-  direction = groups[0]
-  steps = int(groups[1])
   return {
-    'dir': direction,
-    'steps': steps
+    'dir': groups[0],
+    'steps': int(groups[1])
   }
 
 def get_dir_vector(direction):
-  dir_vector = [0, 0]
   if direction == 'R':
     dir_vector = [1, 0]
   elif direction == 'L':
