@@ -6,7 +6,7 @@ class Node:
     self.parent = None
     self.children = []
     self.level = 0
-    self.distance_from_you = 0
+    self.distance_from_you = -1
 
 def get_node(name, nodes_map):
   if name in nodes_map:
@@ -60,8 +60,8 @@ def execute(orbits):
       visited.add(node)
 
     if node.name == 'SAN':
-      # -2 to disregard YOU and SAN nodes themselves
-      print(f'Part 2: {node.distance_from_you-2}')
+      # -1 to disregard SAN node itself
+      print(f'Part 2: {node.distance_from_you-1}')
       break
 
     for c in node.children:
