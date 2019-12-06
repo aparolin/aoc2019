@@ -6,6 +6,7 @@ class Node:
     self.parent = None
     self.children = []
     self.level = 0
+    self.distance_from_you = 0
 
 def get_node(name, nodes_map):
   if name in nodes_map:
@@ -15,11 +16,9 @@ def get_node(name, nodes_map):
     nodes_map[name] = n
     return n
 
-def run_part1(orbits):
-  nodes_map = {}
-  root = None
-
+def execute(orbits):
   # create orbits tree
+  nodes_map = {}
   for o in orbits:
     [name1, name2] = o.split(')')
 
@@ -35,7 +34,7 @@ def run_part1(orbits):
     root = node1.parent
     node1 = root
 
-  # bfs to find direct and indirect orbits
+  # BFS to find direct and indirect orbits
   nodes = Queue()
   nodes.put(root)
 
@@ -47,9 +46,34 @@ def run_part1(orbits):
       nodes.put(c)
       total_orbits += c.level
 
-  return total_orbits
+  print(f'Part 1: {total_orbits}')
+
+  # DFS to find shortest path between nodes
+  visited = set()
+  node = nodes_map['YOU']
+  stack = [node]
+  while len(stack) > 0:
+    node = stack.pop()
+    if node in visited:
+      continue
+    else:
+      visited.add(node)
+
+    if node.name == 'SAN':
+      # -2 to disregard YOU and SAN nodes themselves
+      print(f'Part 2: {node.distance_from_you-2}')
+      break
+
+    for c in node.children:
+      stack.append(c)
+      c.distance_from_you = node.distance_from_you + 1
+
+    # ensure backtracking
+    if node.parent is not None:
+      node.parent.distance_from_you = node.distance_from_you + 1
+      stack.append(node.parent)
 
 if __name__ == '__main__':
   orbits = [line.rstrip('\n') for line in open('input.txt')]
 
-  print(run_part1(orbits))
+  execute(orbits)
