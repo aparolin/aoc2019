@@ -25,8 +25,11 @@ def get_n_params(n, mem, ip, modes):
   
   return params
 
-def run_program(instructions, input_code):
+def run_program(instructions, inputs):
   mem = init_memory(instructions)
+
+  output = None
+  input_counter = 0
 
   ip = 0
   while True:
@@ -34,7 +37,7 @@ def run_program(instructions, input_code):
     [op_code, modes] = parse_instruction(inst)
 
     if op_code == 99:
-      break
+      return output
     elif op_code == 1:
       params = get_n_params(3, mem, ip, modes)
       mem[params[2]] = params[0] + params[1]
@@ -45,11 +48,13 @@ def run_program(instructions, input_code):
       ip += 4
     elif op_code == 3:
       param = mem[ip+1]
-      mem[param] = input_code
+      mem[param] = inputs[input_counter]
+      input_counter += 1
       ip += 2
     elif op_code == 4:
       param = mem[ip+1]
-      print(mem[param])
+      output = mem[param]
+      print(output)
       ip += 2
     elif op_code == 5:
       params = get_n_params(2, mem, ip, modes)
@@ -84,7 +89,7 @@ if __name__ == '__main__':
   instructions = list(map(int, open('input.txt').read().split(',')))
 
   print('Part 1:')
-  run_program(instructions, 1)
+  run_program(instructions, [1])
 
   print('Part 2:')
-  run_program(instructions, 5)
+  run_program(instructions, [5])
