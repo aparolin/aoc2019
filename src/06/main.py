@@ -64,14 +64,14 @@ def execute(orbits):
       print(f'Part 2: {node.distance_from_you-1}')
       break
 
-    for c in node.children:
-      stack.append(c)
-      c.distance_from_you = node.distance_from_you + 1
-
     # ensure backtracking
     if node.parent is not None:
       node.parent.distance_from_you = node.distance_from_you + 1
       stack.append(node.parent)
+
+    for c in node.children:
+      stack.append(c)
+      c.distance_from_you = node.distance_from_you + 1
 
 if __name__ == '__main__':
   orbits = [line.rstrip('\n') for line in open('input.txt')]
