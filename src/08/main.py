@@ -1,4 +1,5 @@
 import math
+from functools import reduce
 
 def get_total_digits(n, layer):
   total = 0
@@ -13,7 +14,6 @@ def find_layers(pixels, width, height):
 
   pixel_idx = 0
   offset = 0
-  total_zeros_by_layer = []
 
   while pixel_idx < len(pixels)-1:
     layer = [[0 for c in range(width)] for w in range(height)]
@@ -29,7 +29,14 @@ def find_layers(pixels, width, height):
     
     layers.append(layer)
     offset += width * height
-    
+  
+  return layers
+
+def run_part1(layers):
+  total_zeros_by_layer = []
+
+  for l in layers:
+    total_zero_digits = reduce(lambda a,b: a + b.count(0), l, 0)
     total_zeros_by_layer.append(total_zero_digits)
 
   layer_fewest_zero_digits = total_zeros_by_layer.index(min(total_zeros_by_layer))
@@ -39,4 +46,6 @@ def find_layers(pixels, width, height):
 
 if __name__ == '__main__':
   pixels = list(map(int,open('input.txt').read()))
-  find_layers(pixels, 25, 6)
+  layers = find_layers(pixels, 25, 6)
+  run_part1(layers)
+  
