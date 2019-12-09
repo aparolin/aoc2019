@@ -17,15 +17,10 @@ def find_layers(pixels, width, height):
 
   while pixel_idx < len(pixels)-1:
     layer = [[0 for c in range(width)] for r in range(height)]
-    total_zero_digits = 0
-
     for row in range(height):
       for col in range(width):
         pixel_idx = (width * row) + col + offset
         layer[row][col] = pixels[pixel_idx]
-    
-        if pixels[pixel_idx] == 0:
-          total_zero_digits += 1
     
     layers.append(layer)
     offset += width * height
