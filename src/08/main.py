@@ -47,25 +47,17 @@ def run_part1(layers):
 def run_part2(layers):
   cols = len(layers[0][0])
   rows = len(layers[0])
-  image = [[0 for c in range(cols)] for w in range(rows)]
-
-  for row in range(rows):
-    for col in range(cols):
-      for l in layers:
-        if l[row][col] == 2:
-          continue
-        else:
-          image[row][col] = l[row][col]
-          break
 
   print('Part 2:\n')
   for row in range(rows):
     for col in range(cols):
-      char = image[row][col]
-      if char == 0:
-        print('.', end='')
-      else:
-        print('o', end='')
+      for l in layers:
+        char = l[row][col]
+        if char == 2:
+          continue
+        else:
+          print('.', end='') if char == 0 else print('o', end='')
+          break
     print()
 
 if __name__ == '__main__':
