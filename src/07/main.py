@@ -4,15 +4,17 @@ from threading import Thread
 
 class Computer(Thread):
 
-  def __init__(self, program, outputs, max_mem_size=5000):
+  def __init__(self, id, program, in_queue, out_queue, max_mem_size=5000):
     Thread.__init__(self)
 
     self.__mem = None
-    self.__outputs = outputs
+    self.__in_queue = in_queue
+    self.__out_queue = out_queue
     self.__max_mem_size = max_mem_size
     self.__ip = 0
     self.__last_output = None
     self.__program_finished = None
+    self.__inputs = Queue
 
     self.__instructions = instructions
     self.__mem = self.__init_memory(instructions)
@@ -44,23 +46,18 @@ class Computer(Thread):
     
     return params
 
-  def set_inputs(self, inputs):
-    self.__inputs = inputs
-
   def run(self):
     self.__program_finished = False
 
     mem = self.__mem
     ip = self.__ip
 
-    input_counter = 0
-
     while True:
       inst = mem[ip]
       [op_code, modes] = self.__parse_instruction(inst)
 
       if op_code == 99:
-        self.__outputs.append(self.__last_output)
+        self.__out_queue.put(self.__last_output)
         break
       elif op_code == 1:
         params = self.__get_n_params(3, ip, modes)
@@ -72,8 +69,7 @@ class Computer(Thread):
         ip += 4
       elif op_code == 3:
         param = mem[ip+1]
-        mem[param] = self.__inputs[input_counter]
-        input_counter += 1
+        mem[param] = self.__in_queue.get()
         ip += 2
       elif op_code == 4:
         param = mem[ip+1]
@@ -113,17 +109,31 @@ if __name__ == '__main__':
   instructions = list(map(int, open('input.txt').read().split(',')))
 
   possible_settings = list(permutations([0,1,2,3,4]))
+  total_computers = 5
+
   outputs = []
-  
   for settings in possible_settings:
+    queues = []
+    computers = []
+    for _ in range(total_computers + 1):
+      queues.append(Queue())
+
+    for i in range(total_computers):
+      computers.append(Computer(instructions, instructions, queues[i], queues[i+1]))
+    
     output = 0
-    for s in settings:
-      inputs = [s, output]
-      computer = Computer(instructions, outputs)
-      computer.set_inputs(inputs)
-      computer.start()
-      computer.join()
-      output = outputs[-1]
-      # outputs.append(output)
+    
+    for idx, s in enumerate(settings):
+
+      queues[idx].put(s)
+      queues[idx].put(output)
+      # inputs = [s, output]
+      # computer = Computer(instructions, idx, input_queues[idx], input)
+      # computer.set_inputs(inputs)
+      
+      computers[idx].start()
+      computers[idx].join()
+      output = queues[idx+1].get()
+      outputs.append(output)
 
   print(f'Part 1: {max(outputs)}')
