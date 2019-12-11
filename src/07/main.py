@@ -1,6 +1,7 @@
 from itertools import permutations
 from queue import Queue
 from threading import Thread
+import time
 
 class Computer(Thread):
 
@@ -48,6 +49,8 @@ class Computer(Thread):
     return params
 
   def run(self):
+    # for some unknown reason, threads need this sleep
+    time.sleep(0.000001)
     self.__program_finished = False
 
     mem = self.__mem
@@ -55,6 +58,7 @@ class Computer(Thread):
 
     while True:
       inst = mem[ip]
+      # print(inst)
       [op_code, modes] = self.__parse_instruction(inst)
 
       if op_code == 99:
@@ -70,14 +74,14 @@ class Computer(Thread):
         ip += 4
       elif op_code == 3:
         param = mem[ip+1]
-        print(f'Computer {self.__id} going to read from queue')
+        # print(f'Computer {self.__id} going to read from queue')
         mem[param] = self.__in_queue.get()
-        print(f'Computer {self.__id} got value {mem[param]}')
+        # print(f'Computer {self.__id} got value {mem[param]}')
         ip += 2
       elif op_code == 4:
         param = mem[ip+1]
         self.__last_output = mem[param]
-        print(f'Computer {self.__id} going to print {self.__last_output} to queue')
+        # print(f'Computer {self.__id} going to print {self.__last_output} to queue')
         self.__out_queue.put(self.__last_output)
         ip += 2
       elif op_code == 5:
@@ -168,5 +172,5 @@ if __name__ == '__main__':
   instructions = list(map(int, open('input.txt').read().split(',')))
 
   total_computers = 5
-  # run_part1(instructions, total_computers)
+  run_part1(instructions, total_computers)
   run_part2(instructions, total_computers)
