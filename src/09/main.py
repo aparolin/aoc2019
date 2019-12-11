@@ -86,7 +86,7 @@ class Computer(Thread):
         ip += 2
       elif op_code == 4:
         params =self.__get_n_params(1, ip, modes)
-        self.__last_output = mem[params[0]]
+        self.__last_output = params[0]
         print(f'Computer {self.__id} going to print {self.__last_output} to queue')
         self.__out_queue.put(self.__last_output)
         ip += 2
@@ -127,6 +127,7 @@ def run_part1(instructions):
   outputs = []
 
   queue = Queue()
+  queue.put(1)
   computer = Computer(0, instructions, queue, queue)
 
   computer.start()
