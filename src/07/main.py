@@ -8,6 +8,7 @@ class Computer(Thread):
     Thread.__init__(self)
 
     self.__mem = None
+    self.__id = id
     self.__in_queue = in_queue
     self.__out_queue = out_queue
     self.__max_mem_size = max_mem_size
@@ -57,7 +58,7 @@ class Computer(Thread):
       [op_code, modes] = self.__parse_instruction(inst)
 
       if op_code == 99:
-        self.__out_queue.put(self.__last_output)
+        # self.__out_queue.put(self.__last_output)
         break
       elif op_code == 1:
         params = self.__get_n_params(3, ip, modes)
@@ -69,11 +70,15 @@ class Computer(Thread):
         ip += 4
       elif op_code == 3:
         param = mem[ip+1]
+        print(f'Computer {self.__id} going to read from queue')
         mem[param] = self.__in_queue.get()
+        print(f'Computer {self.__id} got value {mem[param]}')
         ip += 2
       elif op_code == 4:
         param = mem[ip+1]
         self.__last_output = mem[param]
+        print(f'Computer {self.__id} going to print {self.__last_output} to queue')
+        self.__out_queue.put(self.__last_output)
         print(self.__last_output)
         ip += 2
       elif op_code == 5:
@@ -117,7 +122,7 @@ def run_part1(instructions, total_computers):
       queues.append(Queue())
 
     for i in range(total_computers):
-      computers.append(Computer(instructions, instructions, queues[i], queues[i+1]))
+      computers.append(Computer(i, instructions, queues[i], queues[i+1]))
 
     output = 0
 
@@ -133,9 +138,33 @@ def run_part1(instructions, total_computers):
 
   print(f'Part 1: {max(outputs)}')
 
+def run_part2(instructions, total_computers):
+  possible_settings = list(permutations([5.6,7,8,9]))
+
+  outputs = []
+  for settings in possible_settings:
+    queues = []
+    computers = []
+
+    for _ in range(total_computers):
+      queues.append(Queue())
+    # amplifier A receives 0 as input
+    queues[0].put(0)
+
+    for i in range(total_computers):
+      computers.append(Computer(i, instructions, queues[i], queues[(i+1)%5]))
+
+    for idx, s in enumerate(settings):
+      computers[idx].start()
+
+    for i in range(total_computers):
+      computers[i].join()
+
+  print(f'Part 2: {queues[0].queue}')
 
 if __name__ == '__main__':
   instructions = list(map(int, open('input.txt').read().split(',')))
 
   total_computers = 5
   run_part1(instructions, total_computers)
+  # run_part2(instructions, total_computers)
