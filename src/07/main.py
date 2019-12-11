@@ -79,7 +79,6 @@ class Computer(Thread):
         self.__last_output = mem[param]
         print(f'Computer {self.__id} going to print {self.__last_output} to queue')
         self.__out_queue.put(self.__last_output)
-        print(self.__last_output)
         ip += 2
       elif op_code == 5:
         params = self.__get_n_params(2, ip, modes)
@@ -139,7 +138,7 @@ def run_part1(instructions, total_computers):
   print(f'Part 1: {max(outputs)}')
 
 def run_part2(instructions, total_computers):
-  possible_settings = list(permutations([5.6,7,8,9]))
+  possible_settings = list(permutations([5,6,7,8,9]))
 
   outputs = []
   for settings in possible_settings:
@@ -148,23 +147,26 @@ def run_part2(instructions, total_computers):
 
     for _ in range(total_computers):
       queues.append(Queue())
-    # amplifier A receives 0 as input
-    queues[0].put(0)
 
     for i in range(total_computers):
       computers.append(Computer(i, instructions, queues[i], queues[(i+1)%5]))
 
     for idx, s in enumerate(settings):
+      queues[idx].put(s)
+      if idx == 0:
+        queues[idx].put(0)
       computers[idx].start()
 
     for i in range(total_computers):
       computers[i].join()
+    
+    outputs.append(queues[0].get())
 
-  print(f'Part 2: {queues[0].queue}')
+  print(f'Part 2: {max(outputs)}')
 
 if __name__ == '__main__':
   instructions = list(map(int, open('input.txt').read().split(',')))
 
   total_computers = 5
-  run_part1(instructions, total_computers)
-  # run_part2(instructions, total_computers)
+  # run_part1(instructions, total_computers)
+  run_part2(instructions, total_computers)
