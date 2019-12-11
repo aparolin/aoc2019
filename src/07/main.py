@@ -1,12 +1,19 @@
 from itertools import permutations
+from queue import Queue
+from threading import Thread
 
-class Computer:
+class Computer(Thread):
 
-  def __init__(self, max_mem_size=5000):
+  def __init__(self, program, outputs, max_mem_size=5000):
+    Thread.__init__(self)
+
     self.__mem = None
+    self.__outputs = outputs
     self.__max_mem_size = max_mem_size
+    self.__ip = 0
+    self.__last_output = None
+    self.__program_finished = None
 
-  def load(self, instructions):
     self.__instructions = instructions
     self.__mem = self.__init_memory(instructions)
 
@@ -37,21 +44,24 @@ class Computer:
     
     return params
 
-  def run_program(self, inputs):
-    if self.__mem is None:
-      raise Exception('No program loaded')
+  def set_inputs(self, inputs):
+    self.__inputs = inputs
+
+  def run(self):
+    self.__program_finished = False
 
     mem = self.__mem
-    output = None
+    ip = self.__ip
+
     input_counter = 0
 
-    ip = 0
     while True:
       inst = mem[ip]
       [op_code, modes] = self.__parse_instruction(inst)
 
       if op_code == 99:
-        return output
+        self.__outputs.append(self.__last_output)
+        break
       elif op_code == 1:
         params = self.__get_n_params(3, ip, modes)
         mem[params[2]] = params[0] + params[1]
@@ -62,13 +72,13 @@ class Computer:
         ip += 4
       elif op_code == 3:
         param = mem[ip+1]
-        mem[param] = inputs[input_counter]
+        mem[param] = self.__inputs[input_counter]
         input_counter += 1
         ip += 2
       elif op_code == 4:
         param = mem[ip+1]
-        output = mem[param]
-        print(output)
+        self.__last_output = mem[param]
+        print(self.__last_output)
         ip += 2
       elif op_code == 5:
         params = self.__get_n_params(2, ip, modes)
@@ -104,14 +114,16 @@ if __name__ == '__main__':
 
   possible_settings = list(permutations([0,1,2,3,4]))
   outputs = []
-
-  computer = Computer()
-  computer.load(instructions)
+  
   for settings in possible_settings:
     output = 0
     for s in settings:
       inputs = [s, output]
-      output = computer.run_program(inputs)
-      outputs.append(output)
+      computer = Computer(instructions, outputs)
+      computer.set_inputs(inputs)
+      computer.start()
+      computer.join()
+      output = outputs[-1]
+      # outputs.append(output)
 
   print(f'Part 1: {max(outputs)}')
