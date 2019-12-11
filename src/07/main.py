@@ -105,35 +105,37 @@ class Computer(Thread):
       else:
         raise Exception(f'Unexpected code {op_code}')
 
-if __name__ == '__main__':
-  instructions = list(map(int, open('input.txt').read().split(',')))
-
+def run_part1(instructions, total_computers):
   possible_settings = list(permutations([0,1,2,3,4]))
-  total_computers = 5
 
   outputs = []
   for settings in possible_settings:
     queues = []
     computers = []
+
     for _ in range(total_computers + 1):
       queues.append(Queue())
 
     for i in range(total_computers):
       computers.append(Computer(instructions, instructions, queues[i], queues[i+1]))
-    
-    output = 0
-    
-    for idx, s in enumerate(settings):
 
+    output = 0
+
+    for idx, s in enumerate(settings):
       queues[idx].put(s)
       queues[idx].put(output)
-      # inputs = [s, output]
-      # computer = Computer(instructions, idx, input_queues[idx], input)
-      # computer.set_inputs(inputs)
-      
+
       computers[idx].start()
       computers[idx].join()
+
       output = queues[idx+1].get()
       outputs.append(output)
 
   print(f'Part 1: {max(outputs)}')
+
+
+if __name__ == '__main__':
+  instructions = list(map(int, open('input.txt').read().split(',')))
+
+  total_computers = 5
+  run_part1(instructions, total_computers)
