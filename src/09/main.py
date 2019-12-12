@@ -6,18 +6,15 @@ import time
 
 class Computer(Thread):
 
-  def __init__(self, id, program, in_queue, out_queue, max_mem_size=1000000):
+  def __init__(self, id, program, in_queue, out_queue):
     Thread.__init__(self)
 
     self.__mem = defaultdict(int)
     self.__id = id
     self.__in_queue = in_queue
     self.__out_queue = out_queue
-    self.__max_mem_size = max_mem_size
     self.__ip = 0
     self.__last_output = None
-    self.__program_finished = None
-    self.__inputs = Queue
     self.__relative_base = 0
 
     self.__instructions = instructions
@@ -41,19 +38,16 @@ class Computer(Thread):
   def __get_n_params(self, n, ip, modes):
     params = []
 
-    if str(self.__mem[ip])[-1] == '3':
-      if modes[0] != 2:
-        params.append(self.__mem[ip+1])
-      else:
-        params.append(self.__mem[ip+1] + self.__relative_base)
-      return params
-
     for i in range(0, n):
-      if i == len(modes) -1:
+      # special handling for operator 3 or registries that will 
+      # have data written to
+      if i == len(modes) -1 or str(self.__mem[ip])[-1] == '3':
         if modes[i] == 0:
           params.append(self.__mem[ip+1+i])
         else:
           params.append(self.__mem[ip+1+i] + self.__relative_base)
+
+      # for the others, regular rules apply
       else:
         if modes[i] == 0:
           params.append(self.__mem[self.__mem[ip+1+i]])
@@ -67,19 +61,15 @@ class Computer(Thread):
   def run(self):
     # for some unknown reason, threads need this sleep
     time.sleep(0.000001)
-    self.__program_finished = False
 
     mem = self.__mem
     ip = self.__ip
 
     while True:
       inst = mem[ip]
-
-      # print(inst)
       [op_code, modes] = self.__parse_instruction(inst)
 
       if op_code == 99:
-        # self.__out_queue.put(self.__last_output)
         break
       elif op_code == 1:
         params = self.__get_n_params(3, ip, modes)
@@ -91,14 +81,12 @@ class Computer(Thread):
         ip += 4
       elif op_code == 3:
         params =self.__get_n_params(1, ip, modes)
-        print(f'Computer {self.__id} going to read from queue')
         mem[params[0]] = self.__in_queue.get()
-        print(f'Computer {self.__id} got value {mem[params[0]]}')
         ip += 2
       elif op_code == 4:
         params =self.__get_n_params(1, ip, modes)
         self.__last_output = params[0]
-        print(f'Computer {self.__id} going to print {self.__last_output} to queue')
+        # print(f'Out: {self.__last_output}')
         self.__out_queue.put(self.__last_output)
         ip += 2
       elif op_code == 5:
@@ -134,28 +122,18 @@ class Computer(Thread):
       else:
         raise Exception(f'Unexpected code {op_code}')
 
-def run_part1(instructions):
+def execute_with_input(instructions, input):
   queue = Queue()
-  queue.put(1)
+  queue.put(input)
   computer = Computer(0, instructions, queue, queue)
 
   computer.start()
   computer.join()
 
-  print(f'Part 1: {queue.get()}')
-
-def run_part2(instructions):
-  queue = Queue()
-  queue.put(2)
-  computer = Computer(0, instructions, queue, queue)
-
-  computer.start()
-  computer.join()
-
-  print(f'Part 2: {queue.get()}')
+  return queue.get()
 
 if __name__ == '__main__':
   instructions = list(map(int, open('input.txt').read().split(',')))
 
-  run_part1(instructions)
-  run_part2(instructions)
+  print(f'Part 1: {execute_with_input(instructions, 1)}')
+  print(f'Part 2: {execute_with_input(instructions, 2)}')
