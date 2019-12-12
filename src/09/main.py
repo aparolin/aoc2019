@@ -1,6 +1,7 @@
 from itertools import permutations
 from queue import Queue
 from threading import Thread
+from collections import defaultdict
 import time
 
 class Computer(Thread):
@@ -8,7 +9,7 @@ class Computer(Thread):
   def __init__(self, id, program, in_queue, out_queue, max_mem_size=1000000):
     Thread.__init__(self)
 
-    self.__mem = None
+    self.__mem = defaultdict(int)
     self.__id = id
     self.__in_queue = in_queue
     self.__out_queue = out_queue
@@ -28,30 +29,39 @@ class Computer(Thread):
 
     mode1 = int(i_str[-3]) if len(i_str) >= 3 else 0
     mode2 = int(i_str[-4]) if len(i_str) >= 4 else 0
+    mode3 = int(i_str[-5]) if len(i_str) >= 5 else 0
 
-    return [op_code, [mode1, mode2]]
+    return [op_code, [mode1, mode2, mode3]]
 
   def __init_memory(self, instructions):
-    mem = [0] * self.__max_mem_size
     for idx, instruction in enumerate(instructions):
-      mem[idx] = instruction
-    return mem
+      self.__mem[idx] = instruction
+    return self.__mem
 
   def __get_n_params(self, n, ip, modes):
     params = []
 
+    if str(self.__mem[ip])[-1] == '3':
+      if modes[0] != 2:
+        params.append(self.__mem[ip+1])
+      else:
+        params.append(self.__mem[ip+1] + self.__relative_base)
+      return params
+
     for i in range(0, n):
-      #write address parameter
-      if i >= len(modes):
-        params.append(self.__mem[ip+i+1])
+      if i == len(modes) -1:
+        if modes[i] == 0:
+          params.append(self.__mem[ip+1+i])
+        else:
+          params.append(self.__mem[ip+1+i] + self.__relative_base)
       else:
         if modes[i] == 0:
           params.append(self.__mem[self.__mem[ip+1+i]])
         elif modes[i] == 1:
           params.append(self.__mem[ip+1+i])
         elif modes[i] == 2:
-          params.append(self.__mem[self.__mem[ip+1+i] + self.__relative_base])
-    
+            params.append(self.__mem[self.__mem[ip+1+i] + self.__relative_base])
+      
     return params
 
   def run(self):
@@ -64,6 +74,7 @@ class Computer(Thread):
 
     while True:
       inst = mem[ip]
+
       # print(inst)
       [op_code, modes] = self.__parse_instruction(inst)
 
