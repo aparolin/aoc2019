@@ -135,8 +135,6 @@ class Computer(Thread):
         raise Exception(f'Unexpected code {op_code}')
 
 def run_part1(instructions):
-  outputs = []
-
   queue = Queue()
   queue.put(1)
   computer = Computer(0, instructions, queue, queue)
@@ -146,7 +144,18 @@ def run_part1(instructions):
 
   print(f'Part 1: {queue.get()}')
 
+def run_part2(instructions):
+  queue = Queue()
+  queue.put(2)
+  computer = Computer(0, instructions, queue, queue)
+
+  computer.start()
+  computer.join()
+
+  print(f'Part 2: {queue.get()}')
+
 if __name__ == '__main__':
   instructions = list(map(int, open('input.txt').read().split(',')))
 
   run_part1(instructions)
+  run_part2(instructions)
