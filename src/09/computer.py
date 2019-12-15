@@ -93,7 +93,7 @@ class Computer(Thread):
             attempts += 1
             if attempts == self.__max_attempts_read_input:
               raise Exception('Maximum attempts to reach input queue reached and no input provided')
-            time.sleep(.01)
+            time.sleep(1e-20)
         ip += 2
       elif op_code == 4:
         params =self.__get_n_params(1, ip, modes)
