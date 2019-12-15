@@ -4,7 +4,7 @@ import time
 
 class Computer(Thread):
 
-  def __init__(self, id, program, in_queue, out_queue):
+  def __init__(self, id, program, in_queue, out_queue, max_attempts_read_input=10):
     Thread.__init__(self)
 
     self.__mem = defaultdict(int)
@@ -14,6 +14,7 @@ class Computer(Thread):
     self.__ip = 0
     self.__last_output = None
     self.__relative_base = 0
+    self.__max_attempts_read_input = max_attempts_read_input
 
     self.__instructions = program
     self.__mem = self.__init_memory(program)
@@ -83,7 +84,16 @@ class Computer(Thread):
         ip += 4
       elif op_code == 3:
         params =self.__get_n_params(1, ip, modes)
-        mem[params[0]] = self.__in_queue.get()
+        attempts = 0
+        while True:
+          try:
+            mem[params[0]] = self.__in_queue.get(False)
+            break
+          except Exception as e:
+            attempts += 1
+            if attempts == self.__max_attempts_read_input:
+              raise Exception('Maximum attempts to reach input queue reached and no input provided')
+            time.sleep(.01)
         ip += 2
       elif op_code == 4:
         params =self.__get_n_params(1, ip, modes)
