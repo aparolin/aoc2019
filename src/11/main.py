@@ -37,11 +37,7 @@ class Robot:
   def print_grid(self):
     for row in range(self.__min_row, self.__max_row+1):
       for col in range(self.__min_col, self.__max_col+1):
-        if self.__grid[(row,col)] == 1:
-          self.__white_panels.append((row,col))
-          print('#',end='')
-        else:
-          print('.', end='')
+        print('#' if self.__grid[(row,col)] == 1 else '.', end='')
       print()
 
   def start(self):
@@ -51,25 +47,20 @@ class Robot:
       self.update_grid_boundaries()
       pos_as_tuple = (self.__pos[0], self.__pos[1])
 
-      # print(f'Sending color {self.__grid[pos_as_tuple]}')
       self.__out_com_channel.put(self.__grid[pos_as_tuple])
 
       color = self.__in_com_channel.get()
-      # print(f'Received color {color}')
       if color is None:
         break
       self.__grid[pos_as_tuple] = color
-      # print(f'Painted pos {pos_as_tuple} as {color}')
       self.__panels_painted[pos_as_tuple] += 1
+      self.__white_panels.append(pos_as_tuple)
 
       turn_instruction = self.__in_com_channel.get()
-      # print(f'Received turn instruction {turn_instruction}')
       self.turn(turn_instruction)
       self.__pos += self.__dir
-      # print(f'Now in new position ({self.__pos[0]},{self.__pos[1]})')
-      # color = self.__in_com_channel.get()
 
-    print(f'Part 1: {len(self.__panels_painted.keys())}')
+    print(f'Total pannels painted: {len(self.__panels_painted.keys())}')
 
   def turn(self, code):
     angle = -math.pi/2 if code == 1 else math.pi/2
@@ -83,9 +74,8 @@ if __name__ == '__main__':
   grid = defaultdict(int)
   robot = Robot(instructions, grid)
   robot.start()
-  robot.print_grid()
   white_pannels = robot.get_white_panels()
+
   robot2 = Robot(instructions, grid, list(white_pannels[0]))
   robot2.start()
-  print('\n\n\n\n')
   robot2.print_grid()
