@@ -19,6 +19,9 @@ class Computer(Thread):
     self.__instructions = program
     self.__mem = self.__init_memory(program)
 
+  def wait_until_finished(self):
+    super(Computer, self).join()
+
   def __parse_instruction(self, i):
     i_str = str(i)
     op_code = int(i_str[-2:])
