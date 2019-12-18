@@ -1,3 +1,6 @@
+import sys
+sys.path.append('..')
+
 from itertools import permutations
 from queue import Queue
 from computer import Computer
