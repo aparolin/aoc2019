@@ -4,7 +4,7 @@ import time
 
 class Computer(Thread):
 
-  def __init__(self, id, program, in_queue, out_queue, max_attempts_read_input=10):
+  def __init__(self, id, program, in_queue, out_queue):
     Thread.__init__(self)
 
     self.__mem = defaultdict(int)
@@ -14,7 +14,6 @@ class Computer(Thread):
     self.__ip = 0
     self.__last_output = None
     self.__relative_base = 0
-    self.__max_attempts_read_input = max_attempts_read_input
 
     self.__instructions = program
     self.__mem = self.__init_memory(program)
@@ -60,6 +59,9 @@ class Computer(Thread):
       
     return params
 
+  def update_memory_address(self, address, value):
+    self.__mem[address] = value
+
   def run(self):
     # for some unknown reason, threads need this sleep
     time.sleep(0.000001)
@@ -93,10 +95,7 @@ class Computer(Thread):
             mem[params[0]] = self.__in_queue.get(False)
             break
           except Exception as e:
-            attempts += 1
-            if attempts == self.__max_attempts_read_input:
-              raise Exception('Maximum attempts to reach input queue reached and no input provided')
-            time.sleep(1e-20)
+            time.sleep(0.000001)
         ip += 2
       elif op_code == 4:
         params =self.__get_n_params(1, ip, modes)
