@@ -1,128 +1,104 @@
 import math
-import numpy as np
 
-def distance(a, b):
-    return math.sqrt(math.pow(a[0]-b[0], 2) + math.pow(a[1]-b[1], 2))
+class Asteroid:
+  def __init__(self, x, y):
+    self.x = x
+    self.y = y
 
-def get_detection_count2(grid, row, col):
-    up_vector = np.array([-0.1,0])
+  def __str__(self):
+    return f'({self.x},{self.y})'
+  
+  def __repr__(self):
+    return self.__str__()
 
-    detections = []
-    dir_vector = up_vector
-    step = 0.1
-    angle = 0
-    
-    while angle < 360:
-        while True:
-            pos = np.array([row,col]) + dir_vector * step
+def get_asteroids_set(input):
+  s = set()
+  with open(input, 'r') as f:
+    for y, line in enumerate(f):
+      for x, char in enumerate(line):
+        if char == '#':
+          s.add(Asteroid(x, y))
+  return s
 
-            possible_row = int(round(pos[0]))
-            possible_col = int(round(pos[1]))
-            threshold = 0.01
+def distance(ast1, ast2):
+  return math.sqrt((ast1.x - ast2.x)**2 + (ast1.y - ast2.y)**2)
 
-            if abs(possible_row - pos[0]) < threshold and abs(possible_col - pos[1]) < threshold:
-                if pos[0] < 0 or pos[0] >= len(grid) or pos[1] < 0 or pos[1] >= len(grid[0]):
-                    break
+def in_the_way(ast1, ast2, blocker, slope):
+  distance_between_asteroids = distance(ast1, ast2)
+  distance_to_blocker = distance(ast1, blocker)
 
-                if grid[possible_row][possible_col] == '#':
-                    detections.append((pos[0], pos[1]))
-                    break
-            step += 0.1
+  try:
+    same_side_of_line = (ast2.x - ast1.x)/abs(ast2.x - ast1.x) == (blocker.x - ast1.x)/abs(blocker.x - ast1.x)
+    if ast2.y != ast1.y:
+      same_side_of_line = same_side_of_line and (ast2.y - ast1.y)/abs(ast2.y - ast1.y) == (blocker.y - ast1.y)/abs(blocker.y - ast1.y)
+  except ZeroDivisionError:
+    return False
+  
+  return distance_to_blocker < distance_between_asteroids and \
+    same_side_of_line and (blocker.y - ast1.y) == slope * (blocker.x - ast1.x)
+
+def calculate_line_of_sight(asteroid_set, ast):
+  line_of_sight = 0
+
+  for neighbor in asteroid_set:
+    # print(f'Checking neighbor {neighbor}')
+
+    # same asteroid, skip it
+    if neighbor == ast:
+      continue
+
+    direct_sight = True
+    if ast.x != neighbor.x:
+      slope = (ast.y - neighbor.y) / (ast.x - neighbor.x)
+
+      for possible_blocker in asteroid_set:
+        # print(f'Checking possible blocker {possible_blocker}')
+        # avoid checking for asteroids in the edges of the line
+        if possible_blocker in [ast, neighbor]:
+          continue
+
+        if in_the_way(ast, neighbor, possible_blocker, slope):
+          direct_sight = False
+          break
+    else:
+      asteroids_distance = abs(ast.y - neighbor.y)
+      for possible_blocker in asteroid_set:
+        # avoid checking for asteroids in the edges of the line
+        if possible_blocker in [ast, neighbor]:
+          continue
         
-        angle += 0.1
-        rot_mat = np.matrix([[math.cos(angle), -math.sin(angle)],[math.sin(angle), math.cos(angle)]])
-        dir_vector = np.array(np.matmul(rot_mat, up_vector))[0]
+        # avoid checking if there's a blocker on the other side of the y axis in relation to the neighbor being evaluated
+        if (neighbor.y > ast.y and possible_blocker.y < ast.y) or (neighbor.y < ast.y and possible_blocker.y > ast.y):
+          continue
+
+        if possible_blocker.x == ast.x and abs(possible_blocker.y - ast.y) < asteroids_distance:
+          direct_sight = False
+          break
     
-    return detections
+    if direct_sight:
+      line_of_sight += 1
 
-def get_detection_count(grid, row, col):
-    step = 1
-    detections = []
+  return line_of_sight
 
-    visibles = set()
-    while True:
-        outside_grid = True
-        row_ranges = list(range(row-step, row+step+1))
+def find_best_asteroid(asteroids_set):
+  best_asteroid = None
+  max_line_of_sight = 0
 
-        for i in range(len(row_ranges)):
-            for c in range(col-step, col+step+1):
-                half_range = math.floor(len(row_ranges)/2)
-                idx = (half_range + i) % len(row_ranges)
-                r = row_ranges[idx]
-                # r = (i%(row+step+1))+row-step
+  for asteroid in asteroids_set:
+    # print(f'Checking asteroid {asteroid}')
+    line_of_sight = calculate_line_of_sight(asteroids_set, asteroid)
 
-                # 4,5,6,7
-                # 6,7,4,5
+    if line_of_sight > max_line_of_sight:
+      best_asteroid = asteroid
+      max_line_of_sight = line_of_sight
 
-                # i%8-begin
+    # print(f'Asteroid {asteroid} has line of sight of {line_of_sight}')
 
-                # ensure checking borders only
-                if c > col-step and c < col+step and r > row-step and r < row+step:
-                    continue
-
-                # outside grid
-                if r >= len(grid) or r < 0 or c >= len(grid[0]) or c < 0:
-                    continue
-                outside_grid = False
-
-                if grid[r][c] == '#':
-                    # check if previous asteroids are not blocking the current one
-                    collision = False
-                    for asteroid in visibles:
-                        if distance(asteroid, (row,col)) + distance(asteroid, (r,c)) < 1.0000001*distance((row,col), (r,c)):
-                            collision = True
-                    if not collision:
-                        detections.append((r,c))
-                        visibles.add((r,c))
-
-        if outside_grid:
-            break
-        step += 1
-
-    # print(f'Point {row},{col} has {detections} detections')
-    return detections
-
-def find_best_asteroid(grid):
-    max_detections = -math.inf
-    best_asteroid_pos = None
-
-    for row in range(len(grid)):
-        for col in range(len(grid[0])):
-            if grid[row][col] == '#':
-                detections = len(get_detection_count2(grid, row, col))
-                if detections > max_detections:
-                    max_detections = detections
-                    best_asteroid_pos = (row,col)
-
-    # print(detections)
-    return {
-        'pos': best_asteroid_pos,
-        'detections': max_detections
-    }
-
-def vaporize_asteroids(grid, best):
-    total_vaporized = 0
-
-    done = False
-    while not done:
-        detections = get_detection_count(grid, best[0], best[1])
-        
-        for asteroid in detections:
-            grid[asteroid[0]][asteroid[1]] = '.'
-            total_vaporized += 1
-
-            print(f'{asteroid[0]}, {asteroid[1]}')
-
-            if total_vaporized == 200:
-                print(f'Part 2: {asteroid[0]}{asteroid[1]}')
-                done = True
-                break
+  return best_asteroid, max_line_of_sight
 
 if __name__ == '__main__':
-    grid = list(map(lambda line: list(line[:-1]), open('input.txt').readlines()))
+    asteroids_set = get_asteroids_set('input.txt')
+    print(f'Part 1: {find_best_asteroid(asteroids_set)}')
 
-    best_asteroid = find_best_asteroid(grid)
-    print(f'Part 1: {best_asteroid["detections"]}')
-
-    # vaporize_asteroids(grid, best_asteroid['pos'])
-    
+    # best_asteroid = find_best_asteroid(grid)
+    # print(f'Part 1: {best_asteroid["detections"]}')
