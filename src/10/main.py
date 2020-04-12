@@ -1,7 +1,8 @@
 import math
+from typing import NamedTuple
 
-class Asteroid:
-  def __init__(self, x, y):
+class Asteroid(NamedTuple):
+  def __init__(self, ):
     self.x = x
     self.y = y
 
