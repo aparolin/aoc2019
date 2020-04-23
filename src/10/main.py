@@ -1,8 +1,12 @@
+# this code was developed based on 
+# https://github.com/joelgrus/advent2019/blob/master/day10/day10.py
+
 import math
 from typing import NamedTuple
+from collections import defaultdict
 
-class Asteroid(NamedTuple):
-  def __init__(self, ):
+class Asteroid():
+  def __init__(self, x, y):
     self.x = x
     self.y = y
 
@@ -21,85 +25,59 @@ def get_asteroids_set(input):
           s.add(Asteroid(x, y))
   return s
 
+def count_visible(asteroids, asteroid):
+  slopes = set()
+  
+  for neighbor in asteroids:
+    if neighbor == asteroid:
+      continue
+    
+    dx = neighbor.x - asteroid.x
+    dy = neighbor.y - asteroid.y
+
+    # normalize by greates common denominator
+    gcd = math.gcd(dx, dy)
+    slopes.add((dx/gcd, dy/gcd))
+
+  return len(slopes)
+
+def find_station(asteroids):
+  results = [(a, count_visible(asteroids, a)) for a in asteroids]
+  return max(results, key=lambda a: a[1])
+
 def distance(ast1, ast2):
   return math.sqrt((ast1.x - ast2.x)**2 + (ast1.y - ast2.y)**2)
 
-def in_the_way(ast1, ast2, blocker, slope):
-  distance_between_asteroids = distance(ast1, ast2)
-  distance_to_blocker = distance(ast1, blocker)
+def vaporize(asteroids, station, n):
+  asteroids_by_angle = defaultdict(list)
 
-  try:
-    same_side_of_line = (ast2.x - ast1.x)/abs(ast2.x - ast1.x) == (blocker.x - ast1.x)/abs(blocker.x - ast1.x)
-    if ast2.y != ast1.y:
-      same_side_of_line = same_side_of_line and (ast2.y - ast1.y)/abs(ast2.y - ast1.y) == (blocker.y - ast1.y)/abs(blocker.y - ast1.y)
-  except ZeroDivisionError:
-    return False
-  
-  return distance_to_blocker < distance_between_asteroids and \
-    same_side_of_line and (blocker.y - ast1.y) == slope * (blocker.x - ast1.x)
+  for a in asteroids:
+    dx = a.x - station.x
+    dy = a.y - station.y
 
-def calculate_line_of_sight(asteroid_set, ast):
-  line_of_sight = 0
+    # rotate 90 degrees leftwise as the angle is zero in respect to the vertical axis
+    angle = math.atan2(dy, dx)
+    asteroids_by_angle[angle].append((a, angle))
 
-  for neighbor in asteroid_set:
-    # print(f'Checking neighbor {neighbor}')
+  for angles in asteroids_by_angle.values():
+    angles.sort(key=lambda a: distance(station, a[0]), reverse=True)
 
-    # same asteroid, skip it
-    if neighbor == ast:
-      continue
+  i = 0
+  keys = sorted(list(asteroids_by_angle.keys()), key=lambda k: (2 * math.pi) + k if k < -math.pi/2 else k)
+  while i < n:
+    if i == len(keys):
+      i = 0
+    key = keys[i]
+    asteroids = asteroids_by_angle[key]
+    a = asteroids.pop()
+    i += 1
 
-    direct_sight = True
-    if ast.x != neighbor.x:
-      slope = (ast.y - neighbor.y) / (ast.x - neighbor.x)
-
-      for possible_blocker in asteroid_set:
-        # print(f'Checking possible blocker {possible_blocker}')
-        # avoid checking for asteroids in the edges of the line
-        if possible_blocker in [ast, neighbor]:
-          continue
-
-        if in_the_way(ast, neighbor, possible_blocker, slope):
-          direct_sight = False
-          break
-    else:
-      asteroids_distance = abs(ast.y - neighbor.y)
-      for possible_blocker in asteroid_set:
-        # avoid checking for asteroids in the edges of the line
-        if possible_blocker in [ast, neighbor]:
-          continue
-        
-        # avoid checking if there's a blocker on the other side of the y axis in relation to the neighbor being evaluated
-        if (neighbor.y > ast.y and possible_blocker.y < ast.y) or (neighbor.y < ast.y and possible_blocker.y > ast.y):
-          continue
-
-        if possible_blocker.x == ast.x and abs(possible_blocker.y - ast.y) < asteroids_distance:
-          direct_sight = False
-          break
-    
-    if direct_sight:
-      line_of_sight += 1
-
-  return line_of_sight
-
-def find_best_asteroid(asteroids_set):
-  best_asteroid = None
-  max_line_of_sight = 0
-
-  for asteroid in asteroids_set:
-    # print(f'Checking asteroid {asteroid}')
-    line_of_sight = calculate_line_of_sight(asteroids_set, asteroid)
-
-    if line_of_sight > max_line_of_sight:
-      best_asteroid = asteroid
-      max_line_of_sight = line_of_sight
-
-    # print(f'Asteroid {asteroid} has line of sight of {line_of_sight}')
-
-  return best_asteroid, max_line_of_sight
+  return a
 
 if __name__ == '__main__':
-    asteroids_set = get_asteroids_set('input.txt')
-    print(f'Part 1: {find_best_asteroid(asteroids_set)}')
+    asteroids = get_asteroids_set('input.txt')
+    station = find_station(asteroids)
+    print(f'Part 1: {station}')
 
-    # best_asteroid = find_best_asteroid(grid)
-    # print(f'Part 1: {best_asteroid["detections"]}')
+    destroyed = vaporize(asteroids, station[0], 200)[0]
+    print(f'Part 2: {destroyed.x * 100 + destroyed.y}')
