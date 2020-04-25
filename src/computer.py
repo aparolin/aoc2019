@@ -2,18 +2,22 @@ from threading import Thread
 from collections import defaultdict
 import time
 
-class Computer(Thread):
+class KillSignal():
+  pass
 
-  def __init__(self, id, program, in_queue, out_queue):
+class Computer(Thread): # pylint: disable=too-many-instance-attributes
+
+  def __init__(self, computer_id, program, in_queue, out_queue):
     Thread.__init__(self)
 
     self.__mem = defaultdict(int)
-    self.__id = id
+    self.__id = computer_id
     self.__in_queue = in_queue
     self.__out_queue = out_queue
     self.__ip = 0
     self.__last_output = None
     self.__relative_base = 0
+    self.__stop_requested = False
 
     self.__instructions = program
     self.__mem = self.__init_memory(program)
@@ -40,7 +44,7 @@ class Computer(Thread):
     params = []
 
     for i in range(0, n):
-      # special handling for operator 3 or registries that will 
+      # special handling for operator 3 or registries that will
       # have data written to
       if i == len(modes) -1 or str(self.__mem[ip])[-1] == '3':
         if modes[i] == 0:
@@ -55,24 +59,31 @@ class Computer(Thread):
         elif modes[i] == 1:
           params.append(self.__mem[ip+1+i])
         elif modes[i] == 2:
-            params.append(self.__mem[self.__mem[ip+1+i] + self.__relative_base])
-      
+          params.append(self.__mem[self.__mem[ip+1+i] + self.__relative_base])
+
     return params
 
   def update_memory_address(self, address, value):
     self.__mem[address] = value
 
-  def run(self):
+  def stop(self):
+    print('Computer received request to stop. Shutting down gracefully')
+    self.__stop_requested = True
+    self.__in_queue.put(-1)
+
+  def run(self): #pylint: disable=too-many-branches,too-many-statements
     # for some unknown reason, threads need this sleep
     time.sleep(0.000001)
 
     mem = self.__mem
     ip = self.__ip
 
-    while True:
+    while True and not self.__stop_requested:
       inst = mem[ip]
       [op_code, modes] = self.__parse_instruction(inst)
 
+      if op_code == -1:
+        break
       if op_code == 99:
         # for now, None indicates that the process has finished
         # maybe a better solution would be to create a Halt object?
@@ -88,17 +99,21 @@ class Computer(Thread):
         mem[params[2]] = params[0] * params[1]
         ip += 4
       elif op_code == 3:
-        params =self.__get_n_params(1, ip, modes)
-        attempts = 0
+        params = self.__get_n_params(1, ip, modes)
+        printed_waiting_message = False
         while True:
+          if not printed_waiting_message:
+            print('Waiting for input')
+            printed_waiting_message = True
+
           try:
             mem[params[0]] = self.__in_queue.get(False)
             break
-          except Exception as e:
+          except Exception: #pylint: disable=broad-except
             time.sleep(0.000001)
         ip += 2
       elif op_code == 4:
-        params =self.__get_n_params(1, ip, modes)
+        params = self.__get_n_params(1, ip, modes)
         self.__last_output = params[0]
         # print(f'Out: {self.__last_output}')
         self.__out_queue.put(self.__last_output)
@@ -130,7 +145,7 @@ class Computer(Thread):
           mem[params[2]] = 0
         ip += 4
       elif op_code == 9:
-        params =self.__get_n_params(1, ip, modes)
+        params = self.__get_n_params(1, ip, modes)
         self.__relative_base += params[0]
         ip += 2
       else:

@@ -1,43 +1,80 @@
 import sys
 sys.path.append('..')
-
-from computer import Computer
-from queue import Queue
-from tkinter import *
-import random
+import math
 import time
-import sys
 
-WIDTH = 800
-HEIGHT = 800
-SCALE = 20
+from queue import Queue, Empty
+from computer import Computer
 
-tk = None
-canvas = None
-ball = None
-paddle = None
-last_key_pressed = None
-game_started = False
+from msvcrt import getch
 
-def print_grid(grid):
-  for r in range(len(grid)):
-    for c in range(len(grid[0])):
-      print('#' if grid[r][c] != 0 else '.', end='')
+class ExecutionFinished(Exception):
+  pass
+
+class InputRequired(Exception):
+  pass
+
+def draw_grid():
+  for r in range(grid_size[0]+1):
+    for c in range(grid_size[1]+1):
+      print(grid[(r, c)], end='')
     print()
 
-def create_canvas():
-  global tk
-  global canvas
+def read_output(out_queue, timeout=None):
+  global grid, grid_size
+  n_rows = 0
+  n_cols = 0
+  output = {}
+  paddle_pos = None
+  ball_pos = None
+  score = -1
 
-  tk = Tk()
-  tk.configure(background='black')
-  canvas = Canvas(tk, width=WIDTH, height=HEIGHT)
-  canvas.pack()
+  while True:
+    try:
+      x = out_queue.get(timeout=timeout)
+      # computer ended execution
+      if x is None:
+        grid_size = (n_rows, n_cols)
 
-def run_part1(instruction):
+        output['status'] = 'DONE'
+        output['score'] = score
+        return output
+
+      y = out_queue.get()
+      tile_id = out_queue.get()
+
+      if y > n_rows:
+        n_rows = y
+      if x > n_cols:
+        n_cols = x
+
+      if x == -1 and y == 0:
+        score = tile_id
+
+      if tile_id == 0:
+        grid[(y, x)] = ' '
+      elif tile_id == 1:
+        grid[(y, x)] = '#'
+      elif tile_id == 2:
+        grid[(y, x)] = '@'
+      elif tile_id == 3:
+        grid[(y, x)] = '_'
+        paddle_pos = (y, x)
+      elif tile_id == 4:
+        grid[(y, x)] = 'o'
+        ball_pos = (y, x)
+    except Empty:
+      print(f'paddle = {paddle_pos}')
+      print(f'ball = {ball_pos}')
+      output['status'] = 'WAITING_FOR_INPUT'
+      output['paddle_position'] = paddle_pos
+      output['ball_position'] = ball_pos
+      output['score'] = score
+      return output
+
+def run_part1(instructions):
   total_blocks = 0
 
-  # grid = [[0] * WIDTH] * HEIGHT
   in_queue = Queue()
   out_queue = Queue()
 
@@ -46,127 +83,61 @@ def run_part1(instruction):
   c.wait_until_finished()
 
   while True:
-    x = out_queue.get()
-    # computer ended execution
-    if x is None:
+    output = read_output(out_queue)
+    if output['status'] == 'DONE':
       break
-    y = out_queue.get()
-    tile_id = out_queue.get()
 
-    if tile_id == 2:
+  total_blocks = 0
+  for element in grid.values():
+    if element == '@':
       total_blocks += 1
 
+  draw_grid()
   print(f'Part 1: {total_blocks}')
-  # return grid
-
-def draw_on_screen(state):
-  global ball, paddle
-
-  i = 0
-  # print('entrou no while')
-  while i < len(state):
-    x = state[i]
-    y = state[i+1]
-    tile_id = state[i+2]
-    i += 3
-
-    # if tile_id == 4:
-    #   print(f'ball to {x},{y}')
-
-    rescaled_x1 = (x+1) * SCALE
-    rescaled_x2 = rescaled_x1 + SCALE
-    rescaled_y1 = (y+1) * SCALE
-    rescaled_y2 = rescaled_y1 + SCALE
-
-    if x >= 0:
-      if tile_id == 1:
-        object_id = canvas.create_rectangle(rescaled_x1, rescaled_y1, rescaled_x2, rescaled_y2, fill='gray25')
-      if tile_id == 2:
-        object_id = canvas.create_rectangle(rescaled_x1, rescaled_y1, rescaled_x2, rescaled_y2, fill='gray65')
-      if tile_id == 3:
-        if paddle:
-          canvas.coords(paddle, rescaled_x1, rescaled_y1, rescaled_x2, rescaled_y2)
-        else:
-          paddle = object_id = canvas.create_rectangle(rescaled_x1, rescaled_y1, rescaled_x2, rescaled_y2, fill='gray90')
-      if tile_id == 4:
-        # print(f'updating ball to {rescaled_x1},{rescaled_y1}')
-        if ball:
-          # print('updating ball')
-          canvas.coords(ball, rescaled_x1, rescaled_y1, rescaled_x2, rescaled_y2)
-        else:
-          # print('creating new ball')
-          ball = canvas.create_oval(rescaled_x1, rescaled_y1, rescaled_x2, rescaled_y2, fill='LightSkyBlue1')
-
-    tk.update_idletasks()
-    tk.update()
 
 def run_part2(instructions):
-  global last_key_pressed
-
-  def callback(event):
-    print(event.__dict__)
-    global last_key_pressed
-    global game_started
-    last_key_pressed = event.keysym
-
-    if last_key_pressed == 'Return':
-      game_started = True
-      print('Starting game')
-
   in_queue = Queue()
   out_queue = Queue()
 
-  create_canvas()
+  # insert coins
+  instructions[0] = 2
 
   c = Computer(0, instructions, in_queue, out_queue)
-  c.update_memory_address(0, 2)
-  # in_queue.put(0)
   c.start()
-  
-  ball = None
-  state = []
 
-  canvas.bind("<1>", lambda event: canvas.focus_set())
-  canvas.bind("<Left>", callback)
-  canvas.bind("<Right>", callback)
-  canvas.bind("<Return>", callback)
-  
+  paddle_pos = None
+  ball_pos = None
   while True:
-    data_available = True
+    print('drawing')
+    draw_grid()
 
-    try:
-      x = out_queue.get(False)
-      # computer ended execution
-      if x is None:
-        break
-      y = out_queue.get(False)
-      tile_id = out_queue.get(False)
-      # print('got data')
-      state.append(x)
-      state.append(y)
-      state.append(tile_id)
-    except Exception:
-      # print('drawing')
-      draw_on_screen(state)
-      time.sleep(0.15)
+    output = read_output(out_queue, 0.001)
+    if output['status'] == 'DONE':
+      print(f'Part 2: {output["score"]}')
+      break
+    elif output['status'] == 'WAITING_FOR_INPUT':
+      if output['paddle_position'] is not None:
+        paddle_pos = output ['paddle_position']
+      ball_pos = output['ball_position']
 
-      if not game_started:
-        continue
+      print('using', paddle_pos, ball_pos)
 
-      if last_key_pressed is not None:
-        # print('something was pressed')
-        if last_key_pressed == 'Left':
-          in_queue.put(-1)
-        elif last_key_pressed == 'Right':
-          in_queue.put(1)
-        last_key_pressed = None
+      if paddle_pos[1] < ball_pos[1]:
+        print('going right')
+        command = 1
+      elif paddle_pos[1] > ball_pos[1]:
+        print('going left')
+        command = -1
       else:
-        in_queue.put(0)
-          
-      state = []
+        print('staying where we are')
+        command = 0
 
+      in_queue.put(command)
+
+grid = {}
+grid_size = None
 
 if __name__ == '__main__':
   instructions = list(map(int, open('input.txt').read().split(',')))
-  # run_part1(instructions)
+  run_part1(instructions)
   run_part2(instructions)
