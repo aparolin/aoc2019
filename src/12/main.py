@@ -1,5 +1,10 @@
+# this code was developed based on 
+#https://github.com/joelgrus/advent2019/blob/master/day12/day12.py
+
+import math
 import numpy as np
 import re
+import sys
 from functools import reduce
 from itertools import combinations
 
@@ -48,20 +53,64 @@ def print_moons(moons):
     print(f'pos=<x={m.pos[0]}, y={m.pos[1]}, z={m.pos[2]}>, vel=<x={m.vel[0]}, y={m.vel[1]}, z={m.vel[2]}>')
   print()
 
-def run_simulation(moons, steps):
-  for i in range(steps):
+def state2hash(moons, dim):
+  return tuple((m.pos[dim], m.vel[dim]) for m in moons)
+
+def step(moons):
     moons_combinations = combinations(moons, 2)
     for c in moons_combinations:
       apply_gravity(c[0], c[1])
     
     for m in moons:
       m.update_pos()
-    
-    # print(f'After step {i+1}')
-    # print_moons(moons)
+
+def run_simulation(moons, steps):
+  cur_step = 0
+  universe = {}
+  while True:
+    cur_step += 1
+    if cur_step == steps+1:
+      break
+
+    step(moons)
+
+# returns the least common denominator
+def lcd(numbers):
+  lcd = 1
+  for n in numbers:
+    lcd *= n // math.gcd(lcd, n)
+  return lcd
+
+def universe_repeat_after(moons):
+  cur_step = 0
+  dims = [0, 1, 2]
+  repeated_dimensions_at_step = [-1 for _ in dims]
+  repeated = [False for _ in dims]
+  seen = [set() for _ in dims]
+
+  while not all(repeated):
+    hashes = [state2hash(moons, d) for d in dims]
+    for dim in range(len(dims)):
+      if hashes[dim] in seen[dim] and not repeated[dim]:
+        repeated[dim] = True
+        repeated_dimensions_at_step[dim] = cur_step
+      else:
+        seen[dim].add(hashes[dim])
+
+    cur_step += 1
+    step(moons)
+
+  return lcd(repeated_dimensions_at_step)
 
 if __name__ == '__main__':
-  moons = parse_input_file('input.txt')
-  run_simulation(moons, 1000)
-  total_energy = total_system_energy(moons)
+  filename = sys.argv[1]
+  moons = parse_input_file(filename)
+
+  moons_copy = moons[:]
+  steps = int(sys.argv[2])
+  run_simulation(moons_copy, steps)
+  total_energy = total_system_energy(moons_copy)
   print(f'Part 1: {total_energy}')
+
+  moons_copy = moons[:]
+  print(f'Part 2: {universe_repeat_after(moons_copy)}')
