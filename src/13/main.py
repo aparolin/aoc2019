@@ -64,8 +64,6 @@ def read_output(out_queue, timeout=None):
         grid[(y, x)] = 'o'
         ball_pos = (y, x)
     except Empty:
-      print(f'paddle = {paddle_pos}')
-      print(f'ball = {ball_pos}')
       output['status'] = 'WAITING_FOR_INPUT'
       output['paddle_position'] = paddle_pos
       output['ball_position'] = ball_pos
@@ -108,10 +106,9 @@ def run_part2(instructions):
   paddle_pos = None
   ball_pos = None
   while True:
-    print('drawing')
     draw_grid()
 
-    output = read_output(out_queue, 0.001)
+    output = read_output(out_queue, 1e-6)
     if output['status'] == 'DONE':
       print(f'Part 2: {output["score"]}')
       break
@@ -120,16 +117,11 @@ def run_part2(instructions):
         paddle_pos = output ['paddle_position']
       ball_pos = output['ball_position']
 
-      print('using', paddle_pos, ball_pos)
-
       if paddle_pos[1] < ball_pos[1]:
-        print('going right')
         command = 1
       elif paddle_pos[1] > ball_pos[1]:
-        print('going left')
         command = -1
       else:
-        print('staying where we are')
         command = 0
 
       in_queue.put(command)
